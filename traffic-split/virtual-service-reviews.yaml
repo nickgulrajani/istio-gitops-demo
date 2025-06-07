@@ -5,12 +5,12 @@ metadata:
   namespace: default
 spec:
   hosts:
-    - reviews
+  - reviews
   gateways:
-    - bookinfo-gateway
+  - bookinfo-gateway
   http:
-    - route:
-        - destination:
-            host: reviews
-            subset: v3
-          weight: 100
+  - route:
+    - destination:
+        host: reviews
+        subset: v3
+      weight: 100
