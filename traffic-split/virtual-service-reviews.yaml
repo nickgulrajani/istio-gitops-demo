@@ -12,5 +12,5 @@ spec:
     - route:
         - destination:
             host: reviews
-            subset: v3
+            subset: v2
           weight: 100
