@@ -1,0 +1,20 @@
+# istio-bookinfo-app.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: istio-bookinfo
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/nickgulrajani/istio-gitops-demo.git
+    targetRevision: HEAD
+    path: traffic-split
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+
