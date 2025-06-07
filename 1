@@ -1,0 +1,73 @@
+#!/bin/bash
+
+REPO_DIR="$(pwd)"
+VS_FILE="$REPO_DIR/traffic-split/virtual-service-reviews.yaml"
+APP_NAME="istio-bookinfo"
+GIT_REMOTE="https://github.com/nickgulrajani/istio-gitops-demo.git"
+
+select_version() {
+  echo "🚦 Select which version to route 100% traffic to:"
+  select ver in "reviews v1" "reviews v2" "reviews v3" "Quit"; do
+    case $REPLY in
+      1) version="v1"; break ;;
+      2) version="v2"; break ;;
+      3) version="v3"; break ;;
+      4) exit ;;
+      *) echo "Invalid option. Try again." ;;
+    esac
+  done
+}
+
+update_virtual_service() {
+  cat <<EOF > "$VS_FILE"
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: reviews
+  namespace: default
+spec:
+  hosts:
+    - reviews
+  gateways:
+    - bookinfo-gateway
+  http:
+    - route:
+        - destination:
+            host: reviews
+            subset: $version
+          weight: 100
+EOF
+  echo "✅ Updated VirtualService to route 100% to $version"
+}
+
+git_push_changes() {
+  cd "$REPO_DIR"
+  git add traffic-split/virtual-service-reviews.yaml
+  git commit -m "Route traffic to $version"
+  git push origin main && echo "🚀 Pushed changes to GitHub: $GIT_REMOTE"
+}
+
+argo_sync_app() {
+  echo "🔁 Syncing Argo CD app: $APP_NAME"
+  argocd app sync "$APP_NAME" --insecure --grpc-web || echo "⚠️ Argo CD CLI failed — please check connectivity"
+}
+
+restart_rollouts() {
+  echo "♻️ Restarting review deployments..."
+  kubectl rollout restart deployment reviews-v1 reviews-v2 reviews-v3 -n default
+  echo "✅ Rollout restart triggered"
+}
+
+check_status() {
+  echo "🔍 Verifying current routing..."
+  kubectl get virtualservice reviews -o yaml | grep subset
+}
+
+# === Main ===
+select_version
+update_virtual_service
+git_push_changes
+argo_sync_app
+restart_rollouts
+check_status
+
